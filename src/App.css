@@ -1,0 +1,250 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: center;
+  padding: 2.5rem;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(245, 240, 255, 0.4));
+  box-shadow: 0 20px 50px rgba(21, 24, 35, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(14px);
+  animation: floatIn 0.8s ease-out;
+}
+
+.eyebrow {
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-600);
+  margin-bottom: 1rem;
+}
+
+.hero h1 {
+  font-size: clamp(2.2rem, 2vw + 1.8rem, 3.4rem);
+  margin: 0 0 1rem;
+  color: var(--ink-900);
+}
+
+.lead {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 1.05rem;
+}
+
+.hero-card {
+  padding: 1.8rem;
+  border-radius: 22px;
+  background: rgba(23, 27, 41, 0.95);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.hero-card h2 {
+  margin: 0 0 1.2rem;
+  font-size: 1.2rem;
+}
+
+.stat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.4rem;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  margin: 0 0 1rem;
+  font-weight: 600;
+}
+
+.stat-value.accent {
+  font-size: 2rem;
+  color: #ffce73;
+}
+
+.hint {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.85rem;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+  gap: 2rem;
+  padding: 2.2rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 16px 40px rgba(15, 18, 30, 0.08);
+  border: 1px solid rgba(15, 18, 30, 0.08);
+}
+
+.meta-panel {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.2rem;
+}
+
+.meta-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-500);
+  margin-bottom: 0.4rem;
+}
+
+.meta-value {
+  display: block;
+  font-weight: 600;
+  color: var(--ink-800);
+}
+
+.upload h2,
+.report h2,
+.table-header h2 {
+  margin-top: 0;
+}
+
+.upload p,
+.table-header p {
+  color: var(--ink-600);
+}
+
+.file-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 999px;
+  background: var(--ink-900);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.file-input input {
+  display: none;
+}
+
+.file-input:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(15, 18, 30, 0.2);
+}
+
+.error {
+  margin-top: 1rem;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.report-table {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.report-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: #f7f7fb;
+  font-weight: 600;
+  color: var(--ink-800);
+}
+
+.report-header {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  color: var(--ink-500);
+  background: rgba(44, 50, 74, 0.08);
+}
+
+.report-empty {
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px dashed rgba(44, 50, 74, 0.2);
+  text-align: center;
+  color: var(--ink-500);
+}
+
+.table-panel {
+  grid-template-columns: 1fr;
+}
+
+.table-wrap {
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 18, 30, 0.08);
+  background: #fff;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #1f2333;
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 1rem;
+  font-size: 0.85rem;
+}
+
+tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(15, 18, 30, 0.06);
+  color: var(--ink-700);
+  font-size: 0.9rem;
+}
+
+tbody tr:nth-child(2n) td {
+  background: rgba(246, 247, 251, 0.7);
+}
+
+.empty-cell {
+  text-align: center;
+  padding: 2rem;
+  color: var(--ink-500);
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 980px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  font-family: 'Archivo', sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  color: #141622;
+  background-color: #f3f1ed;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --ink-900: #141622;
+  --ink-800: #2a2f3f;
+  --ink-700: #3d4358;
+  --ink-600: #565d73;
+  --ink-500: #707892;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #fbe9d7 0%, transparent 45%),
+    radial-gradient(circle at 20% 20%, #e1e7ff 0%, transparent 50%),
+    radial-gradient(circle at 80% 0%, #f6d4f7 0%, transparent 45%),
+    linear-gradient(180deg, #f9f6f2 0%, #f1f0fb 100%);
+  color: var(--ink-900);
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+#root {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
