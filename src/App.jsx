@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import './App.css'
 
-const EXPECTED_RANGE = 'B7:R43'
 const MAX_SCORE = 4
 const SECTION_LABELS = {
   1: 'Course Content',
@@ -10,6 +9,17 @@ const SECTION_LABELS = {
   3: 'Content Delivery',
   4: 'Assessment',
 }
+const HEADER_REGEX = /^([1-4])\.(\d+)/
+const HEADER_MIN_MATCHES = 5
+const STOP_LABELS = new Set([
+  'course content',
+  'course outcome',
+  'content delivery',
+  'assessment',
+  'overall percentage',
+  'score',
+  'percentage',
+])
 const META_LOCATIONS = {
   institution: 'A2',
   reportTitle: 'A3',
@@ -57,7 +67,7 @@ const buildSectionConfig = (headers) => {
     if (typeof header !== 'string') {
       return
     }
-    const match = header.trim().match(/^([1-4])\.(\d+)/)
+    const match = header.trim().match(HEADER_REGEX)
     if (!match) {
       return
     }
@@ -74,6 +84,32 @@ const buildSectionConfig = (headers) => {
       label: SECTION_LABELS[sectionKey] || `Section ${sectionKey}`,
       indices,
     }))
+}
+
+const countHeaderMatches = (row) =>
+  row.reduce((count, cell) => {
+    if (typeof cell !== 'string') {
+      return count
+    }
+    return HEADER_REGEX.test(cell.trim()) ? count + 1 : count
+  }, 0)
+
+const looksLikeHeaderRow = (row) => countHeaderMatches(row) >= HEADER_MIN_MATCHES
+
+const isStopRow = (row) => {
+  const firstCell = row[0]
+  if (typeof firstCell !== 'string') {
+    return false
+  }
+  const normalized = firstCell.trim().toLowerCase()
+  return STOP_LABELS.has(normalized)
+}
+
+const normalizeRow = (row, length) => {
+  if (row.length >= length) {
+    return row
+  }
+  return [...row, ...Array.from({ length: length - row.length }, () => null)]
 }
 
 const readCell = (worksheet, address) => {
@@ -123,6 +159,10 @@ function App() {
   const [error, setError] = useState('')
   const [metadata, setMetadata] = useState(null)
 
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   const summary = useMemo(() => {
     if (!report.length) {
       return null
@@ -154,20 +194,38 @@ function App() {
 
       const matrix = XLSX.utils.sheet_to_json(worksheet, {
         header: 1,
-        range: EXPECTED_RANGE,
         defval: null,
       })
 
       if (!matrix.length) {
-        throw new Error(`No data found in range ${EXPECTED_RANGE}.`)
+        throw new Error('No data found in the worksheet.')
       }
 
-      const [headerRow, ...dataRows] = matrix
-      const cleanedRows = dataRows.filter((row) =>
-        row.some((value) => value !== null && value !== '')
-      )
+      const headerRowIndex = matrix.findIndex(looksLikeHeaderRow)
 
+      if (headerRowIndex === -1) {
+        throw new Error('Unable to locate the question headers in this worksheet.')
+      }
+
+      const headerRow = matrix[headerRowIndex]
+      const rawRows = matrix.slice(headerRowIndex + 1)
       const sectionConfig = buildSectionConfig(headerRow)
+      if (!sectionConfig.length) {
+        throw new Error('No numbered question headers (1.1 to 4.x) were found.')
+      }
+      const questionIndices = sectionConfig.flatMap((section) => section.indices)
+      const cleanedRows = []
+      for (const row of rawRows) {
+        if (isStopRow(row)) {
+          break
+        }
+        if (questionIndices.some((index) => toNumber(row[index]) !== null)) {
+          cleanedRows.push(row)
+        }
+      }
+      const normalizedRows = cleanedRows.map((row) =>
+        normalizeRow(row, headerRow.length)
+      )
 
       const computedReport = sectionConfig.map((section) => {
         const average = averageSection(cleanedRows, section.indices)
@@ -193,7 +251,7 @@ function App() {
       })
 
       setHeaders(headerRow)
-      setRows(cleanedRows)
+      setRows(normalizedRows)
       setReport(computedReport)
       setMetadata(sheetMeta)
     } catch (err) {
@@ -210,12 +268,22 @@ function App() {
       <header className="hero">
         <div>
           <p className="eyebrow">Student Feedback Report</p>
-          <h1>Upload an Excel file and generate the summary instantly.</h1>
-          <p className="lead">
-            The report reads range <strong>{EXPECTED_RANGE}</strong>, groups questions into
-            the four sections, and calculates the score and percentage for each section.
-          </p>
+          <h1>Upload feedback data to generate the report.</h1>
         </div>
+      </header>
+
+      <section className="panel">
+        <div className="upload">
+          <div>
+            <h2>Upload feedback data</h2>
+          </div>
+          <label className="file-input">
+            <input type="file" accept=".xlsx" onChange={handleFile} />
+            <span>Choose Excel file</span>
+          </label>
+          {error ? <p className="error">{error}</p> : null}
+        </div>
+
         <div className="hero-card">
           <h2>Quick Stats</h2>
           <p className="stat-label">Current file</p>
@@ -224,12 +292,11 @@ function App() {
           <p className="stat-value accent">{summary || '--'}</p>
           <p className="hint">Supported: .xlsx only</p>
         </div>
-      </header>
+      </section>
 
       <section className="panel meta-panel">
         <div>
           <h2>Metadata</h2>
-          <p>Parsed from the header section of the worksheet.</p>
         </div>
         <div className="meta-grid">
           <div>
@@ -284,21 +351,6 @@ function App() {
       </section>
 
       <section className="panel">
-        <div className="upload">
-          <div>
-            <h2>Upload workbook</h2>
-            <p>
-              Columns B to R are loaded with row 7 as the header and rows 8 to 43 as the
-              responses.
-            </p>
-          </div>
-          <label className="file-input">
-            <input type="file" accept=".xlsx" onChange={handleFile} />
-            <span>Choose Excel file</span>
-          </label>
-          {error ? <p className="error">{error}</p> : null}
-        </div>
-
         <div className="report">
           <h2>Report output</h2>
           <div className="report-table">
@@ -325,10 +377,6 @@ function App() {
       <section className="panel table-panel">
         <div className="table-header">
           <h2>Raw responses</h2>
-          <p>
-            Showing the data extracted from {EXPECTED_RANGE}. Scroll horizontally to see
-            all columns.
-          </p>
         </div>
         <div className="table-wrap">
           <table>
