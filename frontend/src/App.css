@@ -113,8 +113,7 @@
 }
 
 .upload h2,
-.report h2,
-.table-header h2 {
+.report h2 {
   margin-top: 0;
 }
 
@@ -140,9 +139,14 @@
   display: none;
 }
 
-.file-input:hover {
+.file-input:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 12px 30px rgba(15, 18, 30, 0.2);
+}
+
+.file-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .error {
