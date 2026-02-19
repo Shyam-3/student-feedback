@@ -20,5 +20,8 @@
     "excel"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "firebase": "^12.9.0"
+  }
 }

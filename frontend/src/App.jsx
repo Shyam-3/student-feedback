@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
+import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore'
+import { auth, db } from './firebase/config'
 import { parseExcelFile } from './utils/excelParser'
+import Auth from './components/Auth.jsx'
 import './App.css'
 
 const formatNumber = (value, digits = 2) => {
@@ -10,6 +14,8 @@ const formatNumber = (value, digits = 2) => {
 }
 
 function App() {
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,10 +23,42 @@ function App() {
   const [report, setReport] = useState([])
   const [headers, setHeaders] = useState([])
   const [rows, setRows] = useState([])
+  const [previousReports, setPreviousReports] = useState([])
+  const [showPrevious, setShowPrevious] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
+    
+    // Listen to auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      setAuthLoading(false)
+      if (currentUser) {
+        loadPreviousReports(currentUser.uid)
+      }
+    })
+
+    return () => unsubscribe()
   }, [])
+
+  const loadPreviousReports = async (userId) => {
+    try {
+      const reportsRef = collection(db, 'reports')
+      const q = query(
+        reportsRef,
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      )
+      const snapshot = await getDocs(q)
+      const reports = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      setPreviousReports(reports)
+    } catch (err) {
+      console.error('Error loading previous reports:', err)
+    }
+  }
 
   const summary = useMemo(() => {
     if (!report.length) {
@@ -56,6 +94,20 @@ function App() {
         })
       }
       setReport(sections)
+
+      // Save to Firestore
+      if (user) {
+        await saveToFirestore({
+          fileName: file.name,
+          metadata: data.metadata,
+          sections: data.sections,
+          overallPercentage: data.overallPercentage,
+          respondentCount: data.respondentCount,
+          questionsCount: data.questionsCount,
+        })
+        // Reload previous reports
+        await loadPreviousReports(user.uid)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to process the file.')
       setMetadata(null)
@@ -67,6 +119,50 @@ function App() {
     }
   }
 
+  const saveToFirestore = async (reportData) => {
+    try {
+      await addDoc(collection(db, 'reports'), {
+        ...reportData,
+        userId: user.uid,
+        userEmail: user.email,
+        createdAt: new Date().toISOString(),
+      })
+    } catch (err) {
+      console.error('Error saving to Firestore:', err)
+      throw new Error('Failed to save report to database')
+    }
+  }
+
+  const loadPreviousReport = (report) => {
+    setFileName(report.fileName)
+    setMetadata(report.metadata)
+    const sections = [...report.sections]
+    if (report.overallPercentage !== null) {
+      sections.push({
+        label: 'Overall Percentage',
+        score: null,
+        percentage: report.overallPercentage,
+      })
+    }
+    setReport(sections)
+    setHeaders([])
+    setRows([])
+    setShowPrevious(false)
+    window.scrollTo(0, 0)
+  }
+
+  if (authLoading) {
+    return (
+      <div className="app loading-container">
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Auth user={user} />
+  }
+
   return (
     <div className="app">
       <header className="hero">
@@ -74,6 +170,7 @@ function App() {
           <p className="eyebrow">Student Feedback Report</p>
           <h1>Upload feedback data to generate the report.</h1>
         </div>
+        <Auth user={user} />
       </header>
 
       <section className="panel">
@@ -86,6 +183,14 @@ function App() {
             <span>{loading ? 'Processing...' : 'Choose Excel file'}</span>
           </label>
           {error ? <p className="error">{error}</p> : null}
+          {previousReports.length > 0 && (
+            <button
+              onClick={() => setShowPrevious(!showPrevious)}
+              className="btn-previous"
+            >
+              {showPrevious ? 'Hide' : 'View'} Previous Reports ({previousReports.length})
+            </button>
+          )}
         </div>
 
         <div className="hero-card">
@@ -97,6 +202,37 @@ function App() {
           <p className="hint">Supported: .xlsx only</p>
         </div>
       </section>
+
+      {showPrevious && previousReports.length > 0 && (
+        <section className="panel previous-reports">
+          <h2>Previous Reports</h2>
+          <div className="reports-grid">
+            {previousReports.map((prevReport) => (
+              <div key={prevReport.id} className="report-card">
+                <h3>{prevReport.fileName}</h3>
+                <div className="report-card-meta">
+                  <span>{prevReport.metadata?.course || 'N/A'}</span>
+                  <span>{prevReport.metadata?.semester || 'N/A'}</span>
+                </div>
+                <div className="report-card-stats">
+                  <span className="stat-accent">
+                    {formatNumber(prevReport.overallPercentage)}%
+                  </span>
+                  <span className="stat-muted">
+                    {new Date(prevReport.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <button
+                  onClick={() => loadPreviousReport(prevReport)}
+                  className="btn-load"
+                >
+                  Load Report
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="panel meta-panel">
         <div>
@@ -161,6 +297,7 @@ function App() {
           </div>
         </div>
       </section>
+      
       <section className="panel table-panel">
         <div className="table-header">
           <h2>Raw responses</h2>
