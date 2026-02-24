@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'
+import { Link, useNavigate } from 'react-router-dom'
 import { auth, db } from './firebase/config'
 import { parseExcelFile } from './utils/excelParser'
 import Auth from './components/Auth.jsx'
@@ -13,11 +14,24 @@ const formatNumber = (value, digits = 2) => {
   return Number(value).toFixed(digits)
 }
 
+const hashString = (input) => {
+  let hash = 0
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(index)
+    hash |= 0
+  }
+  return `h${Math.abs(hash).toString(16)}`
+}
+
+const buildReportHash = (payload) => hashString(JSON.stringify(payload))
+
 function App() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [metadata, setMetadata] = useState(null)
   const [report, setReport] = useState([])
@@ -25,40 +39,52 @@ function App() {
   const [rows, setRows] = useState([])
   const [previousReports, setPreviousReports] = useState([])
   const [showPrevious, setShowPrevious] = useState(false)
+  const [role, setRole] = useState('faculty')
+  const userName = user?.displayName || user?.email?.split('@')[0] || 'Faculty'
 
-  useEffect(() => {
-    window.scrollTo(0, 0)
-    
-    // Listen to auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser)
-      setAuthLoading(false)
-      if (currentUser) {
-        loadPreviousReports(currentUser.uid)
-      }
-    })
-
-    return () => unsubscribe()
+  const loadUserRole = useCallback(async (uid) => {
+    try {
+      const userRef = doc(db, 'users', uid)
+      const snapshot = await getDoc(userRef)
+      const userRole = snapshot.exists() ? snapshot.data().role : 'faculty'
+      setRole(userRole || 'faculty')
+    } catch (err) {
+      setRole('faculty')
+    }
   }, [])
 
-  const loadPreviousReports = async (userId) => {
+  const loadPreviousReports = useCallback(async (userId) => {
     try {
       const reportsRef = collection(db, 'reports')
-      const q = query(
-        reportsRef,
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      )
+      const q = query(reportsRef, where('userId', '==', userId))
       const snapshot = await getDocs(q)
       const reports = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }))
+      reports.sort(
+        (left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime()
+      )
       setPreviousReports(reports)
     } catch (err) {
       console.error('Error loading previous reports:', err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      setAuthLoading(false)
+      if (currentUser) {
+        loadUserRole(currentUser.uid)
+        loadPreviousReports(currentUser.uid)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [loadUserRole, loadPreviousReports])
 
   const summary = useMemo(() => {
     if (!report.length) {
@@ -75,6 +101,7 @@ function App() {
     }
 
     setError('')
+    setInfo('')
     setLoading(true)
     setFileName(file.name)
 
@@ -95,16 +122,39 @@ function App() {
       }
       setReport(sections)
 
+      const reportHash = buildReportHash({
+        metadata: data.metadata,
+        sections: data.sections,
+        overallPercentage: data.overallPercentage,
+        headers: data.headers,
+        rows: data.rows,
+        respondentCount: data.respondentCount,
+        questionsCount: data.questionsCount,
+      })
+
       // Save to Firestore
       if (user) {
-        await saveToFirestore({
+        const saved = await saveToFirestore({
           fileName: file.name,
+          reportHash,
+          uploaderName: userName,
+          subjectHandled: data.metadata?.course || '',
+          section: data.metadata?.section || '',
           metadata: data.metadata,
           sections: data.sections,
           overallPercentage: data.overallPercentage,
+          totalReportOutput: {
+            overallPercentage: data.overallPercentage,
+            sections: data.sections,
+          },
           respondentCount: data.respondentCount,
           questionsCount: data.questionsCount,
         })
+        if (saved) {
+          setInfo('Report saved to database.')
+        } else {
+          setInfo('Same report data already exists for your account. Duplicate was not saved.')
+        }
         // Reload previous reports
         await loadPreviousReports(user.uid)
       }
@@ -114,6 +164,7 @@ function App() {
       setReport([])
       setHeaders([])
       setRows([])
+      setInfo('')
     } finally {
       setLoading(false)
     }
@@ -121,14 +172,26 @@ function App() {
 
   const saveToFirestore = async (reportData) => {
     try {
-      await addDoc(collection(db, 'reports'), {
+      const reportRef = doc(db, 'reports', `${user.uid}_${reportData.reportHash}`)
+      const existing = await getDoc(reportRef)
+
+      if (existing.exists()) {
+        return false
+      }
+
+      await setDoc(reportRef, {
         ...reportData,
         userId: user.uid,
+        userName,
         userEmail: user.email,
         createdAt: new Date().toISOString(),
       })
+      return true
     } catch (err) {
       console.error('Error saving to Firestore:', err)
+      if (err?.code === 'permission-denied') {
+        throw new Error('Firestore permission denied. Confirm @tce.edu login and deploy latest firestore.rules.')
+      }
       throw new Error('Failed to save report to database')
     }
   }
@@ -170,7 +233,14 @@ function App() {
           <p className="eyebrow">Student Feedback Report</p>
           <h1>Upload feedback data to generate the report.</h1>
         </div>
-        <Auth user={user} />
+        <div className="hero-actions">
+          {role === 'hod' ? (
+            <Link className="admin-link" to="/admin">
+              Admin Console
+            </Link>
+          ) : null}
+          <Auth user={user} mode="compact" />
+        </div>
       </header>
 
       <section className="panel">
@@ -183,6 +253,7 @@ function App() {
             <span>{loading ? 'Processing...' : 'Choose Excel file'}</span>
           </label>
           {error ? <p className="error">{error}</p> : null}
+          {info ? <p className="info">{info}</p> : null}
           {previousReports.length > 0 && (
             <button
               onClick={() => setShowPrevious(!showPrevious)}
@@ -195,6 +266,8 @@ function App() {
 
         <div className="hero-card">
           <h2>Quick Stats</h2>
+          <p className="stat-label">Faculty</p>
+          <p className="stat-value">{userName}</p>
           <p className="stat-label">Current file</p>
           <p className="stat-value">{fileName || 'No file yet'}</p>
           <p className="stat-label">Overall percentage</p>
@@ -211,8 +284,9 @@ function App() {
               <div key={prevReport.id} className="report-card">
                 <h3>{prevReport.fileName}</h3>
                 <div className="report-card-meta">
-                  <span>{prevReport.metadata?.course || 'N/A'}</span>
-                  <span>{prevReport.metadata?.semester || 'N/A'}</span>
+                  <span>{prevReport.subjectHandled || prevReport.metadata?.course || 'N/A'}</span>
+                  <span>{prevReport.section || prevReport.metadata?.section || 'N/A'}</span>
+                  <span>{prevReport.uploaderName || prevReport.userName || 'N/A'}</span>
                 </div>
                 <div className="report-card-stats">
                   <span className="stat-accent">

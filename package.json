@@ -2,26 +2,20 @@
   "name": "feedback-report",
   "version": "1.0.0",
   "private": true,
-  "description": "Student Feedback Report - MERN Stack",
+  "description": "Student Feedback Report - Firebase Frontend",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && npm run dev",
+    "dev": "cd frontend && npm start",
     "dev:frontend": "cd frontend && npm start",
     "build": "cd frontend && npm run build",
-    "start": "cd backend && npm start"
-  },
-  "devDependencies": {
-    "concurrently": "^7.6.0"
+    "start": "cd frontend && npm start"
   },
   "keywords": [
-    "mern",
+    "firebase",
+    "react",
     "feedback",
     "report",
     "excel"
   ],
   "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "firebase": "^12.9.0"
-  }
+  "license": "MIT"
 }

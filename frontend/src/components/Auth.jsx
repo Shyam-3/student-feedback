@@ -3,22 +3,49 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from 'firebase/auth'
-import { auth } from '../firebase/config'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { auth, db } from '../firebase/config'
 import './Auth.css'
 
 const ALLOWED_DOMAIN = 'tce.edu'
 
-const Auth = ({ user, onAuthSuccess }) => {
+const Auth = ({
+  user,
+  onAuthSuccess,
+  mode = 'full',
+  title,
+  subtitle,
+}) => {
   const [isLogin, setIsLogin] = useState(true)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const validateEmail = (email) => {
-    const domain = email.split('@')[1]
+    const normalized = email.trim().toLowerCase()
+    const domain = normalized.split('@')[1]
     return domain === ALLOWED_DOMAIN
+  }
+
+  const ensureUserProfile = async (currentUser) => {
+    const userRef = doc(db, 'users', currentUser.uid)
+    const existingUser = await getDoc(userRef)
+    if (!existingUser.exists()) {
+      const fallbackName = currentUser.displayName
+        || currentUser.email?.split('@')[0]
+        || 'Faculty'
+      await setDoc(userRef, {
+        uid: currentUser.uid,
+        name: fallbackName,
+        email: currentUser.email?.trim().toLowerCase() || '',
+        role: 'faculty',
+        createdAt: new Date().toISOString(),
+      })
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -34,10 +61,21 @@ const Auth = ({ user, onAuthSuccess }) => {
     }
 
     try {
+      const normalizedEmail = email.trim().toLowerCase()
+
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password)
+        const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
+        await ensureUserProfile(credential.user)
       } else {
-        await createUserWithEmailAndPassword(auth, email, password)
+        if (!name.trim()) {
+          setError('User name is required for sign up')
+          setLoading(false)
+          return
+        }
+        const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
+        await updateProfile(credential.user, { displayName: name.trim() })
+
+        await ensureUserProfile(credential.user)
       }
       onAuthSuccess?.()
     } catch (err) {
@@ -56,11 +94,27 @@ const Auth = ({ user, onAuthSuccess }) => {
   }
 
   if (user) {
+    const displayName = user.displayName || user.email?.split('@')[0] || 'Faculty'
+
+    if (mode === 'compact') {
+      return (
+        <div className="auth-user-chip">
+          <div className="chip-text">
+            <span className="chip-label">Logged in as</span>
+            <span className="chip-name">{displayName}</span>
+          </div>
+          <button onClick={handleSignOut} className="btn btn-secondary">
+            Sign Out
+          </button>
+        </div>
+      )
+    }
+
     return (
       <div className="auth-container">
         <div className="auth-panel">
           <div className="user-info">
-            <span className="user-email">{user.email}</span>
+            <span className="user-email">{displayName}</span>
             <button onClick={handleSignOut} className="btn btn-secondary">
               Sign Out
             </button>
@@ -73,14 +127,29 @@ const Auth = ({ user, onAuthSuccess }) => {
   return (
     <div className="auth-container">
       <div className="auth-panel">
-        <h2>{isLogin ? 'Sign In' : 'Create Account'}</h2>
+        <h2>{title || (isLogin ? 'Sign In' : 'Create Account')}</h2>
         <p className="auth-subtitle">
-          Faculty members with @{ALLOWED_DOMAIN} email only
+          {subtitle || `Faculty members with @${ALLOWED_DOMAIN} email only`}
         </p>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
+          {!isLogin && (
+            <div className="form-group">
+              <label htmlFor="name">User Name</label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                required={!isLogin}
+                disabled={loading}
+              />
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <input
@@ -120,6 +189,7 @@ const Auth = ({ user, onAuthSuccess }) => {
             onClick={() => {
               setIsLogin(!isLogin)
               setError('')
+              setName('')
             }}
             className="link-button"
             disabled={loading}

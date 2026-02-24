@@ -43,7 +43,6 @@ feedback-report/
 │   ├── package.json
 │   └── .env                     # Firebase credentials
 │
-├── backend/                      # Legacy (optional, not used with Firebase)
 ├── package.json
 └── README.md
 ```
@@ -264,6 +263,6 @@ REACT_APP_FIREBASE_APP_ID=1:123456789:web:abc123
 
 ## Notes
 
-- Backend folder is legacy (MongoDB version) - not required for Firebase version
+- Project is frontend-only (Firebase Auth + Firestore)
 - All processing happens client-side (secure for user data)
 - Firebase free tier: 1GB storage, 50K reads/day, 20K writes/day
