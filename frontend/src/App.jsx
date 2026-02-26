@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { auth, db } from './firebase/config'
 import { parseExcelFile } from './utils/excelParser'
 import Auth from './components/Auth.jsx'
@@ -26,7 +26,6 @@ const hashString = (input) => {
 const buildReportHash = (payload) => hashString(JSON.stringify(payload))
 
 function App() {
-  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [fileName, setFileName] = useState('')
@@ -40,18 +39,32 @@ function App() {
   const [previousReports, setPreviousReports] = useState([])
   const [showPrevious, setShowPrevious] = useState(false)
   const [role, setRole] = useState('faculty')
-  const userName = user?.displayName || user?.email?.split('@')[0] || 'Faculty'
+  const [profileName, setProfileName] = useState('')
+  const userName = profileName || user?.displayName || user?.email?.split('@')[0] || 'Faculty'
 
   const loadUserRole = useCallback(async (uid) => {
     try {
       const userRef = doc(db, 'users', uid)
       const snapshot = await getDoc(userRef)
       const userRole = snapshot.exists() ? snapshot.data().role : 'faculty'
+      const userProfileName = snapshot.exists() ? snapshot.data().name : ''
       setRole(userRole || 'faculty')
+      setProfileName(userProfileName || '')
     } catch (err) {
       setRole('faculty')
+      setProfileName('')
     }
   }, [])
+
+  const resolveReportDisplayName = useCallback(
+    (reportItem) => {
+      if (reportItem.userId === user?.uid) {
+        return userName
+      }
+      return reportItem.uploaderName || reportItem.userName || 'N/A'
+    },
+    [user?.uid, userName]
+  )
 
   const loadPreviousReports = useCallback(async (userId) => {
     try {
@@ -239,7 +252,7 @@ function App() {
               Admin Console
             </Link>
           ) : null}
-          <Auth user={user} mode="compact" />
+          <Auth user={user} mode="compact" displayNameOverride={userName} />
         </div>
       </header>
 
@@ -286,7 +299,7 @@ function App() {
                 <div className="report-card-meta">
                   <span>{prevReport.subjectHandled || prevReport.metadata?.course || 'N/A'}</span>
                   <span>{prevReport.section || prevReport.metadata?.section || 'N/A'}</span>
-                  <span>{prevReport.uploaderName || prevReport.userName || 'N/A'}</span>
+                  <span>{resolveReportDisplayName(prevReport)}</span>
                 </div>
                 <div className="report-card-stats">
                   <span className="stat-accent">

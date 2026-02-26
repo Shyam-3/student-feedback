@@ -17,6 +17,7 @@ const Auth = ({
   mode = 'full',
   title,
   subtitle,
+  displayNameOverride,
 }) => {
   const [isLogin, setIsLogin] = useState(true)
   const [name, setName] = useState('')
@@ -94,7 +95,7 @@ const Auth = ({
   }
 
   if (user) {
-    const displayName = user.displayName || user.email?.split('@')[0] || 'Faculty'
+    const displayName = displayNameOverride || user.displayName || user.email?.split('@')[0] || 'Faculty'
 
     if (mode === 'compact') {
       return (

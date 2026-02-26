@@ -137,7 +137,7 @@ const AdminRoleManagement = () => {
           <Link className="admin-link" to="/login">
             Faculty Dashboard
           </Link>
-          <Auth user={user} mode="compact" />
+          <Auth user={user} mode="compact" displayNameOverride={users.find((item) => item.id === user?.uid)?.name} />
         </div>
       </header>
 

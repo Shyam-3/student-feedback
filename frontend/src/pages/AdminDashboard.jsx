@@ -15,13 +15,27 @@ const formatNumber = (value, digits = 2) => {
   return Number(value).toFixed(digits)
 }
 
+const getSectionPercentage = (report, sectionLabel) => {
+  const match = report.sections?.find((section) => section.label === sectionLabel)
+  return match?.percentage ?? null
+}
+
 const AdminDashboard = () => {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [error, setError] = useState('')
   const [reports, setReports] = useState([])
   const [faculty, setFaculty] = useState([])
+  const [userDirectory, setUserDirectory] = useState({})
   const navigate = useNavigate()
+
+  const getReportFacultyName = useCallback(
+    (item) => {
+      const liveName = item.userId ? userDirectory[item.userId]?.name : ''
+      return liveName || item.uploaderName || item.userName || 'N/A'
+    },
+    [userDirectory]
+  )
 
   const verifyAdmin = useCallback(async (uid) => {
     try {
@@ -64,6 +78,12 @@ const AdminDashboard = () => {
         .map((docItem) => ({ id: docItem.id, ...docItem.data() }))
         .filter((userItem) => userItem.role === 'faculty')
       setFaculty(allFaculty)
+
+      const liveDirectory = usersSnapshot.docs.reduce((acc, docItem) => {
+        acc[docItem.id] = docItem.data()
+        return acc
+      }, {})
+      setUserDirectory(liveDirectory)
     } catch (err) {
       setError('Unable to load admin data.')
     }
@@ -96,7 +116,7 @@ const AdminDashboard = () => {
   const facultySummary = useMemo(() => {
     const summary = new Map()
     reports.forEach((item) => {
-      const name = item.uploaderName || item.userName || 'Unknown'
+      const name = getReportFacultyName(item)
       if (!summary.has(name)) {
         summary.set(name, new Set())
       }
@@ -108,7 +128,7 @@ const AdminDashboard = () => {
       name,
       subjects: Array.from(subjects),
     }))
-  }, [reports])
+  }, [reports, getReportFacultyName])
 
   if (authLoading) {
     return (
@@ -136,7 +156,7 @@ const AdminDashboard = () => {
           <Link className="admin-link" to="/login">
             Faculty Dashboard
           </Link>
-          <Auth user={user} mode="compact" />
+          <Auth user={user} mode="compact" displayNameOverride={userDirectory[user?.uid]?.name} />
         </div>
       </header>
 
@@ -193,24 +213,30 @@ const AdminDashboard = () => {
                 <th>Faculty</th>
                 <th>Subject</th>
                 <th>Section</th>
+                <th>Course Content %</th>
+                <th>Course Outcome %</th>
+                <th>Content Delivery %</th>
+                <th>Assessment %</th>
                 <th>Overall %</th>
-                <th>Date</th>
               </tr>
             </thead>
             <tbody>
               {reports.length ? (
                 reports.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.uploaderName || item.userName || 'N/A'}</td>
+                    <td>{getReportFacultyName(item)}</td>
                     <td>{item.subjectHandled || 'N/A'}</td>
                     <td>{item.section || 'N/A'}</td>
+                    <td>{formatNumber(getSectionPercentage(item, 'Course Content'))}%</td>
+                    <td>{formatNumber(getSectionPercentage(item, 'Course Outcome'))}%</td>
+                    <td>{formatNumber(getSectionPercentage(item, 'Content Delivery'))}%</td>
+                    <td>{formatNumber(getSectionPercentage(item, 'Assessment'))}%</td>
                     <td>{formatNumber(item.overallPercentage)}%</td>
-                    <td>{new Date(item.createdAt || 0).toLocaleDateString()}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="empty-cell">
+                  <td colSpan={8} className="empty-cell">
                     No report data available.
                   </td>
                 </tr>
