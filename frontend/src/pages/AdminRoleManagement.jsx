@@ -8,6 +8,8 @@ import '../App.css'
 
 const ADMIN_ROLES = new Set(['hod'])
 
+const formatRoleLabel = (role) => (String(role || 'faculty').toUpperCase())
+
 const AdminRoleManagement = () => {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -103,7 +105,7 @@ const AdminRoleManagement = () => {
       setUsers((previous) =>
         previous.map((item) => (item.id === targetUser.id ? { ...item, role: newRole } : item))
       )
-      setInfo(`Updated role for ${targetUser.name || targetUser.email || 'user'} to ${newRole}.`)
+      setInfo(`Updated role for ${targetUser.name || targetUser.email || 'user'} to ${formatRoleLabel(newRole)}.`)
     } catch (err) {
       setError('Unable to update user role. Check Firestore rules for users collection update.')
     } finally {
@@ -164,7 +166,7 @@ const AdminRoleManagement = () => {
                   <tr key={userItem.id}>
                     <td>{userItem.name || 'N/A'}</td>
                     <td>{userItem.email || 'N/A'}</td>
-                    <td>{userItem.role || 'faculty'}</td>
+                    <td>{formatRoleLabel(userItem.role)}</td>
                     <td>
                       <select
                         value={userItem.role || 'faculty'}
@@ -172,8 +174,8 @@ const AdminRoleManagement = () => {
                         disabled={roleSavingFor === userItem.id || userItem.id === user?.uid}
                         className="role-select"
                       >
-                        <option value="faculty">faculty</option>
-                        <option value="hod">hod</option>
+                        <option value="faculty">FACULTY</option>
+                        <option value="hod">HOD</option>
                       </select>
                     </td>
                   </tr>

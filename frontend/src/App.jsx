@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore'
 import { Link } from 'react-router-dom'
 import { auth, db } from './firebase/config'
 import { parseExcelFile } from './utils/excelParser'
@@ -34,8 +34,6 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [metadata, setMetadata] = useState(null)
   const [report, setReport] = useState([])
-  const [headers, setHeaders] = useState([])
-  const [rows, setRows] = useState([])
   const [previousReports, setPreviousReports] = useState([])
   const [showPrevious, setShowPrevious] = useState(false)
   const [role, setRole] = useState('faculty')
@@ -66,24 +64,6 @@ function App() {
     [user?.uid, userName]
   )
 
-  const loadPreviousReports = useCallback(async (userId) => {
-    try {
-      const reportsRef = collection(db, 'reports')
-      const q = query(reportsRef, where('userId', '==', userId))
-      const snapshot = await getDocs(q)
-      const reports = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      reports.sort(
-        (left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime()
-      )
-      setPreviousReports(reports)
-    } catch (err) {
-      console.error('Error loading previous reports:', err)
-    }
-  }, [])
-
   useEffect(() => {
     window.scrollTo(0, 0)
 
@@ -92,12 +72,40 @@ function App() {
       setAuthLoading(false)
       if (currentUser) {
         loadUserRole(currentUser.uid)
-        loadPreviousReports(currentUser.uid)
       }
     })
 
     return () => unsubscribe()
-  }, [loadUserRole, loadPreviousReports])
+  }, [loadUserRole])
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setPreviousReports([])
+      return undefined
+    }
+
+    const reportsRef = collection(db, 'reports')
+    const reportsQuery = query(reportsRef, where('userId', '==', user.uid))
+    const unsubscribe = onSnapshot(
+      reportsQuery,
+      (snapshot) => {
+        const reports = snapshot.docs.map((docItem) => ({
+          id: docItem.id,
+          ...docItem.data(),
+        }))
+        reports.sort(
+          (left, right) =>
+            new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime()
+        )
+        setPreviousReports(reports)
+      },
+      (err) => {
+        console.error('Error listening to previous reports:', err)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user?.uid])
 
   const summary = useMemo(() => {
     if (!report.length) {
@@ -122,8 +130,6 @@ function App() {
       const data = await parseExcelFile(file)
 
       setMetadata(data.metadata)
-      setHeaders(data.headers)
-      setRows(data.rows)
 
       const sections = [...data.sections]
       if (data.overallPercentage !== null) {
@@ -168,15 +174,11 @@ function App() {
         } else {
           setInfo('Same report data already exists for your account. Duplicate was not saved.')
         }
-        // Reload previous reports
-        await loadPreviousReports(user.uid)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to process the file.')
       setMetadata(null)
       setReport([])
-      setHeaders([])
-      setRows([])
       setInfo('')
     } finally {
       setLoading(false)
@@ -221,8 +223,6 @@ function App() {
       })
     }
     setReport(sections)
-    setHeaders([])
-    setRows([])
     setShowPrevious(false)
     window.scrollTo(0, 0)
   }
@@ -261,20 +261,22 @@ function App() {
           <div>
             <h2>Upload feedback data</h2>
           </div>
-          <label className="file-input">
-            <input type="file" accept=".xlsx" onChange={handleFile} disabled={loading} />
-            <span>{loading ? 'Processing...' : 'Choose Excel file'}</span>
-          </label>
+          <div className="upload-actions">
+            <label className="file-input">
+              <input type="file" accept=".xlsx" onChange={handleFile} disabled={loading} />
+              <span>{loading ? 'Processing...' : 'Choose Excel file'}</span>
+            </label>
+            {previousReports.length > 0 && (
+              <button
+                onClick={() => setShowPrevious(!showPrevious)}
+                className="btn-previous"
+              >
+                {showPrevious ? 'Hide' : 'View'} Previous Reports ({previousReports.length})
+              </button>
+            )}
+          </div>
           {error ? <p className="error">{error}</p> : null}
           {info ? <p className="info">{info}</p> : null}
-          {previousReports.length > 0 && (
-            <button
-              onClick={() => setShowPrevious(!showPrevious)}
-              className="btn-previous"
-            >
-              {showPrevious ? 'Hide' : 'View'} Previous Reports ({previousReports.length})
-            </button>
-          )}
         </div>
 
         <div className="hero-card">
@@ -327,22 +329,6 @@ function App() {
         </div>
         <div className="meta-grid">
           <div>
-            <span className="meta-label">Institution</span>
-            <span className="meta-value">{metadata?.institution || '--'}</span>
-          </div>
-          <div>
-            <span className="meta-label">Report title</span>
-            <span className="meta-value">{metadata?.reportTitle || '--'}</span>
-          </div>
-          <div>
-            <span className="meta-label">Academic year</span>
-            <span className="meta-value">{metadata?.academicYear || '--'}</span>
-          </div>
-          <div>
-            <span className="meta-label">Department</span>
-            <span className="meta-value">{metadata?.department || '--'}</span>
-          </div>
-          <div>
             <span className="meta-label">Course</span>
             <span className="meta-value">{metadata?.course || '--'}</span>
           </div>
@@ -353,6 +339,10 @@ function App() {
           <div>
             <span className="meta-label">Section</span>
             <span className="meta-value">{metadata?.section || '--'}</span>
+          </div>
+          <div>
+            <span className="meta-label">Academic year</span>
+            <span className="meta-value">{metadata?.academicYear || '--'}</span>
           </div>
           <div>
             <span className="meta-label">Generated on</span>
@@ -382,42 +372,6 @@ function App() {
               <div className="report-empty">Upload a file to see the report.</div>
             )}
           </div>
-        </div>
-      </section>
-      
-      <section className="panel table-panel">
-        <div className="table-header">
-          <h2>Raw responses</h2>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {headers.map((header, index) => (
-                  <th key={`${header}-${index}`}>{header || `Col ${index + 1}`}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length ? (
-                rows.map((row, rowIndex) => (
-                  <tr key={`row-${rowIndex}`}>
-                    {headers.map((_, colIndex) => (
-                      <td key={`cell-${rowIndex}-${colIndex}`}>
-                        {row[colIndex] ?? ''}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={headers.length || 1} className="empty-cell">
-                    Upload a file to load the responses.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </section>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -10,6 +10,28 @@ import { auth, db } from '../firebase/config'
 import './Auth.css'
 
 const ALLOWED_DOMAIN = 'tce.edu'
+
+const getIstHour = () => {
+  const hourValue = new Intl.DateTimeFormat('en-IN', {
+    hour: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date())
+  return Number.parseInt(hourValue, 10)
+}
+
+const getSalutationByHour = (hour) => {
+  if (hour >= 5 && hour < 12) {
+    return 'Good Morning'
+  }
+  if (hour >= 12 && hour < 17) {
+    return 'Good Afternoon'
+  }
+  if (hour >= 17 && hour < 22) {
+    return 'Good Evening'
+  }
+  return 'Good Late Night'
+}
 
 const Auth = ({
   user,
@@ -23,8 +45,29 @@ const Auth = ({
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [istHour, setIstHour] = useState(getIstHour)
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setIstHour(getIstHour())
+    }, 60 * 1000)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [])
+
+  useEffect(() => {
+    const shouldUseFullPageAuth = !user && mode === 'full'
+    document.body.classList.toggle('auth-screen', shouldUseFullPageAuth)
+
+    return () => {
+      document.body.classList.remove('auth-screen')
+    }
+  }, [mode, user])
 
   const validateEmail = (email) => {
     const normalized = email.trim().toLowerCase()
@@ -96,12 +139,13 @@ const Auth = ({
 
   if (user) {
     const displayName = displayNameOverride || user.displayName || user.email?.split('@')[0] || 'Faculty'
+    const salutation = getSalutationByHour(istHour)
 
     if (mode === 'compact') {
       return (
         <div className="auth-user-chip">
           <div className="chip-text">
-            <span className="chip-label">Logged in as</span>
+            <span className="chip-label">{salutation}</span>
             <span className="chip-name">{displayName}</span>
           </div>
           <button onClick={handleSignOut} className="btn btn-secondary">
@@ -112,7 +156,7 @@ const Auth = ({
     }
 
     return (
-      <div className="auth-container">
+      <div className={`auth-container ${mode === 'full' ? 'auth-full-page' : ''}`}>
         <div className="auth-panel">
           <div className="user-info">
             <span className="user-email">{displayName}</span>
@@ -126,12 +170,14 @@ const Auth = ({
   }
 
   return (
-    <div className="auth-container">
+    <div className={`auth-container ${mode === 'full' ? 'auth-full-page' : ''}`}>
       <div className="auth-panel">
-        <h2>{title || (isLogin ? 'Sign In' : 'Create Account')}</h2>
-        <p className="auth-subtitle">
-          {subtitle || `Faculty members with @${ALLOWED_DOMAIN} email only`}
-        </p>
+        <div className="auth-header">
+          <h2>{title || (isLogin ? 'Sign in to your account' : 'Create your account')}</h2>
+          <p className="auth-subtitle">
+            {subtitle || `Faculty members with @${ALLOWED_DOMAIN} email only`}
+          </p>
+        </div>
 
         {error && <div className="error-message">{error}</div>}
 
@@ -167,7 +213,7 @@ const Auth = ({
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -176,6 +222,16 @@ const Auth = ({
               disabled={loading}
               minLength={6}
             />
+            <label className="password-toggle" htmlFor="show-password">
+              <input
+                type="checkbox"
+                id="show-password"
+                checked={showPassword}
+                onChange={(event) => setShowPassword(event.target.checked)}
+                disabled={loading}
+              />
+              <span>Show password</span>
+            </label>
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -191,11 +247,13 @@ const Auth = ({
               setIsLogin(!isLogin)
               setError('')
               setName('')
+              setPassword('')
+              setShowPassword(false)
             }}
             className="link-button"
             disabled={loading}
           >
-            {isLogin ? 'Sign Up' : 'Sign In'}
+            {isLogin ? 'Sign up' : 'Sign in'}
           </button>
         </div>
       </div>

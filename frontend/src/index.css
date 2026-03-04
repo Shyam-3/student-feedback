@@ -1,21 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  font-family: 'Archivo', sans-serif;
-  line-height: 1.6;
+  --primary-gradient: #4c6ef5;
+  --primary-color: #4c6ef5;
+  --primary-dark: #3b5bdb;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --success-color: #198754;
+  --info-color: #0dcaf0;
+  --light-bg: #f8f9fa;
+
+  --ink-900: #212529;
+  --ink-800: #343a40;
+  --ink-700: #495057;
+  --ink-600: #6c757d;
+  --ink-500: #868e96;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
   font-weight: 400;
-  color: #141622;
-  background-color: #f3f1ed;
+  color: var(--ink-900);
+  background-color: #f4f6fb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  --ink-900: #141622;
-  --ink-800: #2a2f3f;
-  --ink-700: #3d4358;
-  --ink-600: #565d73;
-  --ink-500: #707892;
 }
 
 * {
@@ -26,25 +35,30 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, #fbe9d7 0%, transparent 45%),
-    radial-gradient(circle at 20% 20%, #e1e7ff 0%, transparent 50%),
-    radial-gradient(circle at 80% 0%, #f6d4f7 0%, transparent 45%),
-    linear-gradient(180deg, #f9f6f2 0%, #f1f0fb 100%);
   color: var(--ink-900);
+  background: linear-gradient(180deg, #f7f9fc 0%, #eef2f8 100%);
 }
 
 h1,
 h2,
 h3 {
-  font-family: 'Space Grotesk', sans-serif;
+  margin: 0;
+  color: var(--ink-900);
+  font-weight: 700;
 }
 
 p {
-  margin: 0 0 1rem;
+  margin: 0;
 }
 
 #root {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 4rem;
+  padding: 2rem 1rem 3rem;
+}
+
+body.auth-screen #root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
