@@ -36,7 +36,7 @@ const getSectionTail = (value) => {
   return lastToken.toUpperCase()
 }
 
-const LOW_ALERT_THRESHOLD = 83
+const LOW_ALERT_THRESHOLD = 75
 
 const isLowPercentage = (value) =>
   value !== null && value !== undefined && Number(value) < LOW_ALERT_THRESHOLD
