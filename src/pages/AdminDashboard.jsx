@@ -428,27 +428,27 @@ const AdminDashboard = () => {
                     <td className="col-section">{getSectionTail(item.section)}</td>
                     <td className="col-metric">
                       <span className={`metric-badge ${isLowPercentage(courseContent) ? 'metric-badge-low' : ''}`}>
-                        {formatNumber(courseContent)}%
+                        {formatNumber(courseContent)}
                       </span>
                     </td>
                     <td className="col-metric">
                       <span className={`metric-badge ${isLowPercentage(courseOutcome) ? 'metric-badge-low' : ''}`}>
-                        {formatNumber(courseOutcome)}%
+                        {formatNumber(courseOutcome)}
                       </span>
                     </td>
                     <td className="col-metric">
                       <span className={`metric-badge ${isLowPercentage(contentDelivery) ? 'metric-badge-low' : ''}`}>
-                        {formatNumber(contentDelivery)}%
+                        {formatNumber(contentDelivery)}
                       </span>
                     </td>
                     <td className="col-metric">
                       <span className={`metric-badge ${isLowPercentage(assessment) ? 'metric-badge-low' : ''}`}>
-                        {formatNumber(assessment)}%
+                        {formatNumber(assessment)}
                       </span>
                     </td>
                     <td className="col-metric">
                       <span className={`metric-badge ${isLowPercentage(overall) ? 'metric-badge-low' : ''}`}>
-                        {formatNumber(overall)}%
+                        {formatNumber(overall)}
                       </span>
                     </td>
                     <td className="col-action">
