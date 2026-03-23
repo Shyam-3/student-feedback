@@ -2,20 +2,35 @@
   "name": "feedback-report",
   "version": "1.0.0",
   "private": true,
-  "description": "Student Feedback Report - Firebase Frontend",
   "scripts": {
-    "dev": "cd frontend && npm start",
-    "dev:frontend": "cd frontend && npm start",
-    "build": "cd frontend && npm run build",
-    "start": "cd frontend && npm start"
+    "dev": "react-scripts start",
+    "build": "react-scripts build",
+    "start": "react-scripts start",
+    "eject": "react-scripts eject"
   },
-  "keywords": [
-    "firebase",
-    "react",
-    "feedback",
-    "report",
-    "excel"
-  ],
-  "author": "",
-  "license": "MIT"
+  "dependencies": {
+    "firebase": "^12.9.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^6.22.3",
+    "react-scripts": "5.0.1",
+    "xlsx": "^0.18.5"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
 }

@@ -1,6 +1,6 @@
 # Student Feedback Report - Firebase + React
 
-A full-stack application to upload and process student feedback Excel files, calculate section-wise scores, and generate detailed reports. Features Firebase Authentication with @tce.edu email restriction and Firestore database for storing results.
+A frontend application to upload and process student feedback Excel files, calculate section-wise scores, and generate detailed reports. Features Firebase Authentication with @tce.edu email restriction and Firestore database for storing results.
 
 ## Tech Stack
 
@@ -26,23 +26,22 @@ A full-stack application to upload and process student feedback Excel files, cal
 
 ```
 feedback-report/
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── App.jsx              # Main component
-│   │   ├── App.css              # Styling
-│   │   ├── index.js             # Entry point
-│   │   ├── index.css            # Global styles
-│   │   ├── components/
-│   │   │   ├── Auth.jsx         # Authentication component
-│   │   │   └── Auth.css         # Auth styling
-│   │   ├── firebase/
-│   │   │   └── config.js        # Firebase configuration
-│   │   └── utils/
-│   │       └── excelParser.js   # Excel processing logic
-│   ├── package.json
-│   └── .env                     # Firebase credentials
-│
+├── public/
+├── src/
+│   ├── App.jsx                  # Main component
+│   ├── App.css                  # Styling
+│   ├── index.js                 # Entry point
+│   ├── index.css                # Global styles
+│   ├── components/
+│   │   ├── Auth.jsx             # Authentication component
+│   │   └── Auth.css             # Auth styling
+│   ├── firebase/
+│   │   └── config.js            # Firebase configuration
+│   └── utils/
+│       └── excelParser.js       # Excel processing logic
+├── firebase.json
+├── firestore.rules
+├── firestore.indexes.json
 ├── package.json
 └── README.md
 ```
@@ -96,7 +95,7 @@ service cloud.firestore {
 
 ### 5. Configure Environment Variables
 
-Create `frontend/.env`:
+Create `.env`:
 ```env
 REACT_APP_FIREBASE_API_KEY=AIzaSy...
 REACT_APP_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
@@ -111,13 +110,12 @@ REACT_APP_FIREBASE_APP_ID=1:123456789:web:abc123
 ### 1. Install Dependencies
 
 ```bash
-cd frontend
 npm install
 ```
 
 ### 2. Configure Firebase
 
-Update `frontend/.env` with your Firebase credentials from step 5 above.
+Update `.env` with your Firebase credentials from step 5 above.
 
 ### 3. Start Development Server
 
@@ -197,7 +195,6 @@ firebase login
 ### 3. Initialize Firebase Project
 
 ```bash
-cd frontend
 firebase init
 ```
 
@@ -224,7 +221,7 @@ Your app will be live at: `https://your-project-id.web.app`
 
 ## Environment Variables for Production
 
-Create `frontend/.env.production`:
+Create `.env.production`:
 ```env
 REACT_APP_FIREBASE_API_KEY=your-production-key
 REACT_APP_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
@@ -239,7 +236,7 @@ REACT_APP_FIREBASE_APP_ID=1:123456789:web:abc123
 1. **Email Domain Restriction**: Only @tce.edu emails can sign up (enforced in Auth.jsx)
 2. **Firestore Rules**: Set production rules to restrict read/write to authenticated users
 3. **Environment Variables**: Never commit `.env` files (already in `.gitignore`)
-4. **Firebase API Key**: Safe to expose in frontend (restricted by domain in Firebase Console)
+4. **Firebase API Key**: Safe to expose in client apps (restricted by domain in Firebase Console)
 
 ## Data Privacy
 
@@ -258,7 +255,7 @@ REACT_APP_FIREBASE_APP_ID=1:123456789:web:abc123
 - Ensure user is authenticated
 
 **Import Errors**:
-- Run `npm install` in frontend directory
+- Run `npm install` in the project root
 - Check all Firebase packages are installed
 
 ## Notes
